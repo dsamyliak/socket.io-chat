@@ -1,23 +1,55 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState, useEffect, useCallback } from "react";
+import io from "socket.io-client";
+import { nanoid } from "nanoid";
+
+import Chat from "./components/Chat/Chat";
+import ChatForm from "./components/ChatForm/ChatForm";
+import SigninChatForm from "./components/SigninChatForm/SigninChatForm";
+
+import "./App.css";
+
+const socket = io.connect("http://localhost:5000");
 
 function App() {
+  const [nickname, setNickname] = useState("");
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    // socket.on("connect", () => {
+    //   console.log("Connect success");
+    // });
+    socket.on("chat-message", (message) => {
+      setMessages((prevMessages) => {
+        const newMessage = {
+          id: nanoid(),
+          type: "user",
+          message,
+        };
+
+        return [...prevMessages, newMessage];
+      });
+    });
+  }, []);
+
+  const addNickname = useCallback(({ name }) => setNickname(name), []);
+  const addMessage = ({ message }) => {
+    setMessages((prevMessages) => {
+      const newMessage = {
+        id: nanoid(),
+        type: "you",
+        message,
+      };
+      return [...prevMessages, newMessage];
+    });
+
+    socket.emit("chat-message", message);
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {!nickname && <SigninChatForm onSubmit={addNickname} />}
+      {nickname && <ChatForm onSubmit={addMessage} />}
+      {nickname && <Chat items={messages} />}
     </div>
   );
 }
